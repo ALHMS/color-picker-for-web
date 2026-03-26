@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Color Picker PWA</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+    #video { width: 100vw; height: 100vh; object-fit: cover; }
+    
+    /* 中央の照準 */
+    #reticle {
+      position: absolute; top: 50%; left: 50%;
+      width: 30px; height: 30px;
+      border: 2px solid #fff; border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* UIレイヤー */
+    .ui {
+      position: absolute; bottom: 30px; left: 0; right: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+    }
+
+    #shutter {
+      width: 70px; height: 70px; border-radius: 50%; border: 5px solid #fff;
+      background: rgba(255,255,255,0.3); cursor: pointer;
+    }
+
+    #result {
+      background: rgba(255,255,255,0.9); padding: 10px 20px;
+      border-radius: 30px; display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    #color-preview { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #ccc; }
+    #color-code { font-weight: bold; font-family: monospace; }
+  </style>
+</head>
+<body>
+
+  <video id="video" autoplay playsinline></video>
+  <div id="reticle"></div>
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <div class="ui">
+    <div id="result">
+      <div id="color-preview"></div>
+      <span id="color-code">#------</span>
+    </div>
+    <button id="shutter"></button>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const shutterBtn = document.getElementById('shutter');
+    const colorPreview = document.getElementById('color-preview');
+    const colorCode = document.getElementById('color-code');
+
+    // カメラ起動
+    async function initCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("カメラの起動に失敗しました。設定を確認してください。");
+      }
+    }
+
+    // 色抽出処理
+    shutterBtn.onclick = () => {
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // 映像をキャプチャ
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // 中央のピクセルを取得
+      const pixel = ctx.getImageData(canvas.width / 2, canvas.height / 2, 1, 1).data;
+      const hex = `#${((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1).toUpperCase()}`;
+      
+      // 表示更新
+      colorPreview.style.backgroundColor = hex;
+      colorCode.innerText = hex;
+      
+      // クリップボードへコピー（おまけ）
+      navigator.clipboard.writeText(hex).catch(() => {});
+    };
+
+    // Service Worker登録
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+
+    initCamera();
+  </script>
+</body>
+</html>
