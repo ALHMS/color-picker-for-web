@@ -2,55 +2,253 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Color Picker PWA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Pinpoint Color Picker</title>
   <link rel="manifest" href="manifest.json">
   <style>
-    body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-    #video { width: 100vw; height: 100vh; object-fit: cover; }
+    html, body { 
+      margin: 0; 
+      padding: 0;
+      overflow: hidden; 
+      background: #000; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      touch-action: none; 
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
     
-    /* 中央の照準 */
-    #reticle {
-      position: absolute; top: 50%; left: 50%;
-      width: 30px; height: 30px;
-      border: 2px solid #fff; border-radius: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    #video { 
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%; 
+      height: 100%; 
+      object-fit: cover; 
+      display: block;
+    }
+    
+    #pin-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -100%);
       pointer-events: none;
       z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    /* UIレイヤー */
+    #pin-head {
+      width: 36px;
+      height: 36px;
+      background-color: #fff;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+
+    #pin-point {
+      width: 4px;
+      height: 14px;
+      background-color: #fff;
+      margin-top: -1px;
+      border-radius: 0 0 2px 2px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .filter-controls {
+      position: absolute;
+      top: env(safe-area-inset-top, 20px);
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      background: rgba(0, 0, 0, 0.4); 
+      padding: 5px 15px 15px 15px;
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 30;
+      border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      min-width: 180px;
+    }
+
+    .drag-handle {
+      width: 100%;
+      height: 12px;
+      margin-bottom: 10px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 6px;
+      cursor: grab;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      touch-action: none;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+      background: rgba(255,255,255,0.25);
+    }
+    .drag-handle::before {
+      content: "";
+      width: 40px;
+      height: 3px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 2px;
+    }
+
+    .filter-group {
+      margin-bottom: 15px;
+    }
+    .filter-group:last-child {
+      margin-bottom: 10px;
+    }
+    .filter-controls label {
+      color: #fff;
+      font-size: 11px;
+      display: block;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+      font-weight: bold;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+    
+    .filter-controls input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+      margin: 10px 0;
+    }
+    .filter-controls input[type="range"]:focus {
+      outline: none;
+    }
+    
+    .filter-controls input[type="range"]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 2px;
+    }
+    .filter-controls input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 24px;
+      width: 24px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      margin-top: -10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    }
+
+    .filter-controls input[type="range"]::-moz-range-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 2px;
+    }
+    .filter-controls input[type="range"]::-moz-range-thumb {
+      height: 24px;
+      width: 24px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    }
+
+    /* リセットボタンのスタイル */
+    #reset-filters {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.75em;
+      font-weight: bold;
+      align-self: flex-end;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+    }
+    #reset-filters:active {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
     .ui {
-      position: absolute; bottom: 30px; left: 0; right: 0;
-      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      position: absolute; 
+      bottom: env(safe-area-inset-bottom, 30px);
+      left: 0; right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      z-index: 20;
     }
 
     #shutter {
-      width: 70px; height: 70px; border-radius: 50%; border: 5px solid #fff;
-      background: rgba(255,255,255,0.3); cursor: pointer;
+      width: 76px; height: 76px; border-radius: 50%; border: 5px solid #fff;
+      background: rgba(255,255,255,0.2); cursor: pointer;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
     }
+    #shutter:active { transform: scale(0.9); background: rgba(255,255,255,0.4); }
 
     #result {
-      background: rgba(255,255,255,0.9); padding: 10px 20px;
-      border-radius: 30px; display: flex; align-items: center; gap: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      background: rgba(0,0,0,0.85); color: #fff; padding: 12px 20px;
+      border-radius: 30px; display: flex; align-items: center; gap: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
     }
 
-    #color-preview { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #ccc; }
-    #color-code { font-weight: bold; font-family: monospace; }
+    #color-code { 
+      font-weight: bold; 
+      font-family: 'Courier New', Courier, monospace; 
+      font-size: 1.1em; 
+      min-width: 130px; 
+      text-align: center;
+    }
+
+    #toggle-format {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
+      color: #fff; padding: 6px 12px; border-radius: 15px;
+      cursor: pointer; font-size: 0.75em; font-weight: bold;
+      -webkit-tap-highlight-color: transparent;
+    }
   </style>
 </head>
 <body>
 
   <video id="video" autoplay playsinline></video>
-  <div id="reticle"></div>
+  
+  <div id="pin-container">
+    <div id="pin-head"></div>
+    <div id="pin-point"></div>
+  </div>
+
+  <div class="filter-controls" id="filter-panel">
+    <div class="drag-handle" id="drag-handle"></div>
+    <div class="filter-group">
+      <label>BRIGHTNESS</label>
+      <input type="range" id="range-brightness" min="0.3" max="2.0" step="0.05" value="1.0">
+    </div>
+    <div class="filter-group">
+      <label>SATURATION（彩度）</label>
+      <input type="range" id="range-saturation" min="0.0" max="2.5" step="0.05" value="1.0">
+    </div>
+    <button id="reset-filters">RESET</button>
+  </div>
+
   <canvas id="canvas" style="display:none;"></canvas>
 
   <div class="ui">
     <div id="result">
-      <div id="color-preview"></div>
-      <span id="color-code">#------</span>
+      <span id="color-code">TAP SHUTTER</span>
+      <button id="toggle-format">to RGB</button>
     </div>
     <button id="shutter"></button>
   </div>
@@ -59,10 +257,19 @@
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const shutterBtn = document.getElementById('shutter');
-    const colorPreview = document.getElementById('color-preview');
+    const pinHead = document.getElementById('pin-head');
     const colorCode = document.getElementById('color-code');
+    const toggleBtn = document.getElementById('toggle-format');
+    const rangeBrightness = document.getElementById('range-brightness');
+    const rangeSaturation = document.getElementById('range-saturation');
+    const resetBtn = document.getElementById('reset-filters');
+    const filterPanel = document.getElementById('filter-panel');
+    const dragHandle = document.getElementById('drag-handle');
 
-    // カメラ起動
+    let currentRGB = { r: 255, g: 255, b: 255 };
+    let currentMode = 'HEX';
+    let hasPicked = false;
+
     async function initCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -71,32 +278,159 @@
         });
         video.srcObject = stream;
       } catch (err) {
-        alert("カメラの起動に失敗しました。設定を確認してください。");
+        alert("カメラの起動に失敗しました。設定で許可してください。");
       }
     }
 
-    // 色抽出処理
+    function applyFilters() {
+      const bFactor = parseFloat(rangeBrightness.value);
+      const sFactor = parseFloat(rangeSaturation.value);
+      
+      const cssFilter = `brightness(${bFactor}) saturate(${sFactor})`;
+      video.style.filter = cssFilter;
+      video.style.webkitFilter = cssFilter;
+    }
+    
+    rangeBrightness.addEventListener('input', applyFilters);
+    rangeSaturation.addEventListener('input', applyFilters);
+
+    // リセットボタンの処理
+    resetBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      rangeBrightness.value = 1.0;
+      rangeSaturation.value = 1.0;
+      applyFilters();
+    });
+
+    async function copyToClipboard(text) {
+      if (!hasPicked) return;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (err) {}
+    }
+
+    function updateColorDisplay(shouldCopy = true) {
+      const { r, g, b } = currentRGB;
+      const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+      
+      pinHead.style.backgroundColor = hex;
+
+      let displayText = '';
+      if (currentMode === 'HEX') {
+        displayText = hex;
+        toggleBtn.innerText = 'to RGB';
+      } else {
+        displayText = `rgb(${r}, ${g}, ${b})`;
+        toggleBtn.innerText = 'to HEX';
+      }
+      
+      colorCode.innerText = displayText;
+      if (shouldCopy) copyToClipboard(displayText);
+    }
+
     shutterBtn.onclick = () => {
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (video.videoWidth === 0) return;
+
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      
-      // 映像をキャプチャ
+
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       
-      // 中央のピクセルを取得
-      const pixel = ctx.getImageData(canvas.width / 2, canvas.height / 2, 1, 1).data;
-      const hex = `#${((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1).toUpperCase()}`;
+      const centerX = Math.floor(canvas.width / 2);
+      const centerY = Math.floor(canvas.height / 2);
       
-      // 表示更新
-      colorPreview.style.backgroundColor = hex;
-      colorCode.innerText = hex;
+      const boxSize = 5;
+      const offset = Math.floor(boxSize / 2);
+      const imageData = ctx.getImageData(centerX - offset, centerY - offset, boxSize, boxSize).data;
       
-      // クリップボードへコピー（おまけ）
-      navigator.clipboard.writeText(hex).catch(() => {});
+      let rSum = 0, gSum = 0, bSum = 0;
+      const pixelCount = boxSize * boxSize;
+
+      for (let i = 0; i < imageData.length; i += 4) {
+        rSum += imageData[i];
+        gSum += imageData[i + 1];
+        bSum += imageData[i + 2];
+      }
+
+      let r = rSum / pixelCount;
+      let g = gSum / pixelCount;
+      let bVal = bSum / pixelCount;
+      
+      const bFactor = parseFloat(rangeBrightness.value);
+      const sFactor = parseFloat(rangeSaturation.value);
+
+      r *= bFactor;
+      g *= bFactor;
+      bVal *= bFactor;
+
+      const luma = 0.2126 * r + 0.7152 * g + 0.0722 * bVal;
+      
+      r = luma + sFactor * (r - luma);
+      g = luma + sFactor * (g - luma);
+      bVal = luma + sFactor * (bVal - luma);
+
+      const finalR = Math.min(255, Math.max(0, Math.round(r)));
+      const finalG = Math.min(255, Math.max(0, Math.round(g)));
+      const finalB = Math.min(255, Math.max(0, Math.round(bVal)));
+
+      currentRGB = { r: finalR, g: finalG, b: finalB };
+      
+      hasPicked = true;
+      updateColorDisplay(true);
     };
 
-    // Service Worker登録
+    toggleBtn.onclick = (e) => {
+      e.stopPropagation();
+      currentMode = (currentMode === 'HEX') ? 'RGB' : 'HEX';
+      updateColorDisplay(true);
+    };
+
+    let isDragging = false;
+    let startX, startY, initialLeft, initialTop;
+
+    const startDrag = (e) => {
+      isDragging = true;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      startX = clientX;
+      startY = clientY;
+      
+      const rect = filterPanel.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      
+      filterPanel.style.right = 'auto';
+      filterPanel.style.left = `${initialLeft}px`;
+      filterPanel.style.top = `${initialTop}px`;
+    };
+
+    const doDrag = (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      
+      filterPanel.style.left = `${initialLeft + dx}px`;
+      filterPanel.style.top = `${initialTop + dy}px`;
+    };
+
+    const endDrag = () => { isDragging = false; };
+
+    dragHandle.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', doDrag);
+    document.addEventListener('mouseup', endDrag);
+
+    dragHandle.addEventListener('touchstart', startDrag, {passive: false});
+    document.addEventListener('touchmove', doDrag, {passive: false});
+    document.addEventListener('touchend', endDrag);
+
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
